@@ -122,7 +122,17 @@ func (tcr *TinkerbellClusterReconciler) newReconcileContext(ctx context.Context,
 	cluster, err := util.GetOwnerCluster(crc.ctx, crc.client, crc.tinkerbellCluster.ObjectMeta)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("getting owner cluster: %w", err)
+			// Getting by Owner failed. Try to get by label "cluster.x-k8s.io/cluster-name" on the TinkerbellCluster
+			crc.log.Info("Owning cluster is not found by Owner reference, trying by labels.")
+			clusterByLabel, errByLabel := util.GetClusterFromMetadata(crc.ctx, crc.client, crc.tinkerbellCluster.ObjectMeta)
+			if errByLabel != nil {
+				return nil, fmt.Errorf("getting by-label cluster: %w", errByLabel)
+			}
+			if clusterByLabel == nil {
+				crc.log.Info("Owning cluster is not found by labels either.")
+				return nil, fmt.Errorf("getting owner(and labelled) cluster: %w", err)
+			}
+			cluster = clusterByLabel
 		}
 	}
 
