@@ -126,6 +126,8 @@ func (tcr *TinkerbellClusterReconciler) newReconcileContext(ctx context.Context,
 		}
 	}
 
+	// @TODO: the owner cluster might not really be our owner, in case of mixed clusters. Find the owner cluster somehow else (eg by name)
+
 	if cluster == nil {
 		crc.log.Info("OwnerCluster is not set yet.")
 	}
