@@ -127,7 +127,27 @@ func (tcr *TinkerbellClusterReconciler) newReconcileContext(ctx context.Context,
 	}
 
 	if cluster == nil {
-		crc.log.Info("OwnerCluster is not set yet.")
+		crc.log.Info("OwnerCluster is not set yet; trying by label")
+		clusterByLabel, err := util.GetClusterFromMetadata(crc.ctx, crc.client, crc.tinkerbellCluster.ObjectMeta)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("getting cluster from metadata(label): %w", err)
+			}
+		}
+		if clusterByLabel == nil {
+			crc.log.Info("Cluster is not set yet, even by labels")
+		} else {
+			crc.log.Info("Cluster found by label, setting as owner reference")
+			cluster = clusterByLabel
+			// "Set" the owner reference so that future reconciliations don't have to do this again.
+			if err := ctrl.SetControllerReference(cluster, crc.tinkerbellCluster, crc.client.Scheme()); err != nil {
+				return nil, fmt.Errorf("setting owner reference: %w", err)
+			}
+			if err := crc.patchHelper.Patch(crc.ctx, crc.tinkerbellCluster); err != nil {
+				return nil, fmt.Errorf("patching TinkerbellCluster with owner reference: %w", err)
+			}
+			crc.log.Info("Owner reference set via label lookup")
+		}
 	}
 
 	crc.cluster = cluster
