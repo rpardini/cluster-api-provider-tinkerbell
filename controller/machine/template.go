@@ -158,6 +158,7 @@ func (scope *machineReconcileScope) createTemplate(hw *tinkv1.Hardware) error {
 
 	templateData := scope.tinkerbellMachine.Spec.TemplateOverride
 	if templateData == "" {
+		scope.log.Info("tinkerbellMachine.Spec.TemplateOverride is empty, trying from hardware annotation")
 		tmplFromAnnotation, err := scope.templateFromAnnotation(hw)
 		if err != nil {
 			return fmt.Errorf("failed to get template from hardware annotation: %w", err)
@@ -167,6 +168,7 @@ func (scope *machineReconcileScope) createTemplate(hw *tinkv1.Hardware) error {
 
 	// If still no template, generate the default one.
 	if templateData == "" {
+		scope.log.Info("no template found in hardware annotation, generating default template")
 		defaultTemplate, err := scope.generateDefaultTemplate(hw)
 		if err != nil {
 			return err
@@ -235,7 +237,9 @@ func (scope *machineReconcileScope) templateFromAnnotation(hw *tinkv1.Hardware) 
 	// Check if hardware has an annotation 'hardware.tinkerbell.org/capt-template-override', if so,
 	// use it as the name of a Template resource in the same namespace as the Hardware, load it,
 	// and use it's spec.data as the template
+	scope.log.Info("hardware annotations", "annotations", hw.Annotations)
 	if templateName, ok := hw.Annotations["hardware.tinkerbell.org/capt-template-override"]; ok {
+		scope.log.Info("found template override in Hardware annotation", "templateName", templateName, "namespace", hw.Namespace)
 		overrideTemplate := &tinkv1.Template{}
 		namespacedName := types.NamespacedName{
 			Name:      templateName,
