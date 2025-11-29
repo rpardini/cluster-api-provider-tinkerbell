@@ -21,6 +21,8 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
+replace github.com/tinkerbell/tinkerbell/api => github.com/rpardini/tinkerbell-tinkerbell/api v0.0.0-20251128211253-7ad2efec140e
+
 require (
 	cel.dev/expr v0.20.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
