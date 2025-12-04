@@ -154,7 +154,7 @@ func (scope *machineReconcileScope) ensureHardware() (*tinkv1.Hardware, error) {
 	}
 
 	scope.tinkerbellMachine.Spec.HardwareName = hw.Name
-	scope.tinkerbellMachine.Spec.ProviderID = fmt.Sprintf("tinkerbell://%s/%s", hw.Namespace, hw.Name)
+	scope.tinkerbellMachine.Spec.ProviderID = fmt.Sprintf("tinkerbell://%s/%s/%s", hw.Namespace, hw.Name, scope.tinkerbellMachine.Name)
 
 	if err := scope.ensureHardwareUserData(hw, scope.tinkerbellMachine.Spec.ProviderID); err != nil {
 		return nil, fmt.Errorf("ensuring Hardware user data: %w", err)
