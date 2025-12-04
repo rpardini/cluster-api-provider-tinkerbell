@@ -376,7 +376,7 @@ func Test_Machine_reconciliation_with_available_hardware(t *testing.T) {
 		t.Parallel()
 		g := NewWithT(t)
 
-		g.Expect(updatedMachine.Spec.ProviderID).To(Equal(fmt.Sprintf("tinkerbell://%s/%s", clusterNamespace, hardwareName)),
+		g.Expect(updatedMachine.Spec.ProviderID).To(Equal(fmt.Sprintf("tinkerbell://%s/%s/%s", clusterNamespace, hardwareName, updatedMachine.Name)),
 			"Expected ProviderID field to include hardwareUUID")
 	})
 
@@ -503,7 +503,7 @@ func Test_Machine_reconciliation_workflow_complete(t *testing.T) {
 		t.Parallel()
 		g := NewWithT(t)
 
-		g.Expect(updatedMachine.Spec.ProviderID).To(Equal(fmt.Sprintf("tinkerbell://%s/%s", clusterNamespace, hardwareName)),
+		g.Expect(updatedMachine.Spec.ProviderID).To(Equal(fmt.Sprintf("tinkerbell://%s/%s/%s", clusterNamespace, hardwareName, updatedMachine.Name)),
 			"Expected ProviderID field to include hardwareUUID")
 	})
 
