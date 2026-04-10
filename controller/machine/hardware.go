@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	tinkv1 "github.com/tinkerbell/tinkerbell/api/v1alpha1/tinkerbell"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -99,14 +100,28 @@ func (scope *machineReconcileScope) patchHardwareAnnotations(hw *tinkv1.Hardware
 }
 
 func (scope *machineReconcileScope) takeHardwareOwnership(hw *tinkv1.Hardware) error {
-	patchHelper, err := patch.NewHelper(hw, scope.client)
-	if err != nil {
-		return fmt.Errorf("initializing patch helper for selected hardware: %w", err)
+	if hw == nil {
+		return ErrHardwareIsNil
 	}
 
 	if hw.Labels == nil {
 		hw.Labels = map[string]string{}
 	}
+
+	ownerName, hasOwnerName := hw.Labels[HardwareOwnerNameLabel]
+	ownerNamespace, hasOwnerNamespace := hw.Labels[HardwareOwnerNamespaceLabel]
+	if (hasOwnerName || hasOwnerNamespace) &&
+		(ownerName != scope.tinkerbellMachine.Name || ownerNamespace != scope.tinkerbellMachine.Namespace) {
+		return fmt.Errorf("hardware %s/%s is already owned by %s/%s: %w",
+			hw.Namespace,
+			hw.Name,
+			ownerNamespace,
+			ownerName,
+			ErrNoHardwareAvailable,
+		)
+	}
+
+	before := hw.DeepCopy()
 
 	hw.Labels[HardwareOwnerNameLabel] = scope.tinkerbellMachine.Name
 	hw.Labels[HardwareOwnerNamespaceLabel] = scope.tinkerbellMachine.Namespace
@@ -114,7 +129,11 @@ func (scope *machineReconcileScope) takeHardwareOwnership(hw *tinkv1.Hardware) e
 	// Add finalizer to hardware as well to make sure we release it before Machine object is removed.
 	controllerutil.AddFinalizer(hw, infrastructurev1.MachineFinalizer)
 
-	if err := patchHelper.Patch(scope.ctx, hw); err != nil {
+	if err := scope.client.Patch(scope.ctx, hw, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})); err != nil {
+		if apierrors.IsConflict(err) {
+			return fmt.Errorf("hardware %s/%s was claimed concurrently: %w", hw.Namespace, hw.Name, ErrNoHardwareAvailable)
+		}
+
 		return fmt.Errorf("patching Hardware object: %w", err)
 	}
 
